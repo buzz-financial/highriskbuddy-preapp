@@ -9,7 +9,7 @@
   <body>
     <div class="container">
       <header>
-        <h1>High Risk Buddy</h1>
+        <img src="./src/High-Risk-Buddy-Logo.png" alt="High Risk Buddy Logo" class="header-logo" />
         <h2>Merchant Preapproval Application</h2>
         <p>Get pre-approved for high-risk merchant processing</p>
       </header>
@@ -270,7 +270,7 @@
               name="yearsOwned"
               min="0"
               max="100"
-              placeholder="5"
+              placeholder="e.g. 5"
               required
             />
           </div>
@@ -493,7 +493,7 @@
                   type="text"
                   id="ownerTimeAtAddress1"
                   name="owners[0][timeAtAddress]"
-                  placeholder="e.g., 2 years 6 months"
+                  placeholder="e.g. 2 years 6 months"
                   required
                 />
               </div>
@@ -543,17 +543,23 @@
                 type="number"
                 id="monthlyVolume"
                 name="monthlyVolume"
-                placeholder="10000"
+                placeholder="e.g. 10000"
                 required
               />
             </div>
             <div class="form-group">
               <label for="highTicket">High Ticket Amount *</label>
-              <input type="number" id="highTicket" name="highTicket" placeholder="500" required />
+              <input
+                type="number"
+                id="highTicket"
+                name="highTicket"
+                placeholder="e.g. 500"
+                required
+              />
             </div>
             <div class="form-group">
               <label for="avgTicket">Average Ticket Amount *</label>
-              <input type="number" id="avgTicket" name="avgTicket" placeholder="50" required />
+              <input type="number" id="avgTicket" name="avgTicket" placeholder="e.g. 50" required />
             </div>
           </div>
 
@@ -565,7 +571,7 @@
               name="expectedAmex"
               min="0"
               max="100"
-              placeholder="15"
+              placeholder="e.g. 15"
               required
             />
           </div>
