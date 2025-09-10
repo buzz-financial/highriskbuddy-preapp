@@ -308,9 +308,17 @@ function setupOwnerManagement() {
 
         <div class="form-group">
           <label for="ownerSSN${ownerNum}">Social Security # *</label>
-          <input type="text" id="ownerSSN${ownerNum}" name="owners[${
-      ownerNum - 1
-    }][ssn]" pattern="[0-9]{3}-[0-9]{2}-[0-9]{4}" placeholder="123-45-6789" required />
+          <input 
+            type="text" 
+            id="ownerSSN${ownerNum}" 
+            name="owners[${ownerNum - 1}][ssn]" 
+            pattern="^(?!000|666)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$" 
+            maxlength="11"
+            placeholder="XXX-XX-XXXX" 
+            required 
+            aria-describedby="ssnError${ownerNum}"
+          />
+          <div id="ssnError${ownerNum}" class="ssn-error error-message"></div>
         </div>
 
         <div class="form-row">
@@ -490,43 +498,124 @@ function setupOwnerManagement() {
   }
 }
 
-// Input masking for formatted fields
+// Input masking and validation setup
 function setupInputMasking() {
-  // Phone number masking
-  const phoneInputs = document.querySelectorAll('input[type="tel"]');
-  phoneInputs.forEach((input) => {
-    input.addEventListener("input", function (e) {
-      let value = e.target.value.replace(/\D/g, "");
+  // Add input masking for the entire form including dynamically added fields
+  document.addEventListener("input", function (e) {
+    const input = e.target;
+
+    // Phone number masking
+    if (input.type === "tel") {
+      let value = input.value.replace(/\D/g, "");
       if (value.length >= 6) {
         value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
       } else if (value.length >= 3) {
         value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}`;
       }
-      e.target.value = value;
-    });
-  });
+      input.value = value;
+    }
 
-  // SSN masking
-  const ssnInputs = document.querySelectorAll('input[pattern*="[0-9]{3}-[0-9]{2}-[0-9]{4}"]');
-  ssnInputs.forEach((input) => {
-    input.addEventListener("input", function (e) {
-      let value = e.target.value.replace(/\D/g, "");
+    // SSN masking and validation
+    if (input.id === "ownerSSN1" || input.id.startsWith("ownerSSN")) {
+      let value = input.value.replace(/\D/g, "");
       if (value.length >= 5) {
         value = `${value.slice(0, 3)}-${value.slice(3, 5)}-${value.slice(5, 9)}`;
       } else if (value.length >= 3) {
-        value = `${value.slice(0, 3)}-${value.slice(3, 5)}`;
+        value = `${value.slice(0, 3)}-${value.slice(3)}`;
       }
-      e.target.value = value;
-    });
+      input.value = value;
+
+      // Add error message container if it doesn't exist
+      let errorDiv = input.parentElement.querySelector(".ssn-error");
+      if (!errorDiv) {
+        errorDiv = document.createElement("div");
+        errorDiv.className = "ssn-error error-message";
+        input.parentElement.appendChild(errorDiv);
+      }
+
+      // Check pattern validity
+      if (input.value.length > 0) {
+        const ssnPattern = /^(?!000|666)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$/;
+        if (!ssnPattern.test(input.value)) {
+          errorDiv.textContent = "Please enter a valid SSN (XXX-XX-XXXX).";
+          errorDiv.style.display = "block";
+          input.setAttribute("aria-invalid", "true");
+        } else {
+          errorDiv.style.display = "none";
+          input.removeAttribute("aria-invalid");
+        }
+      }
+    } // Routing number validation and formatting
+    if (input.id === "routingNumber") {
+      let value = input.value.replace(/\D/g, "").slice(0, 9);
+      input.value = value;
+
+      // Add error message container if it doesn't exist
+      let errorMsg = input.parentElement.querySelector(".error-message");
+      if (!errorMsg) {
+        errorMsg = document.createElement("div");
+        errorMsg.className = "error-message";
+        input.parentElement.appendChild(errorMsg);
+      }
+
+      // Validate length and show/hide error message
+      if (value.length > 0 && value.length !== 9) {
+        errorMsg.textContent = "Routing number must be exactly 9 digits";
+        errorMsg.style.display = "block";
+        input.setAttribute("aria-invalid", "true");
+      } else {
+        errorMsg.style.display = "none";
+        input.removeAttribute("aria-invalid");
+      }
+    }
   });
 
-  // Routing number validation (9 digits)
-  const routingInput = document.getElementById("routingNumber");
-  if (routingInput) {
-    routingInput.addEventListener("input", function (e) {
-      e.target.value = e.target.value.replace(/\D/g, "").slice(0, 9);
-    });
-  }
+  // Setup validation for additional owner fields
+  document.addEventListener(
+    "invalid",
+    function (e) {
+      const input = e.target;
+      if (input.parentElement.closest(".owner-block")) {
+        e.preventDefault(); // Prevent default validation popup
+
+        // Add error message container if it doesn't exist
+        let errorMsg = input.parentElement.querySelector(".error-message");
+        if (!errorMsg) {
+          errorMsg = document.createElement("div");
+          errorMsg.className = "error-message";
+          input.parentElement.appendChild(errorMsg);
+        }
+
+        // Show appropriate error message
+        if (input.validity.valueMissing) {
+          errorMsg.textContent = "This field is required";
+        } else if (input.validity.patternMismatch) {
+          if (input.id.startsWith("ownerSSN")) {
+            errorMsg.textContent = "Please enter a valid SSN (XXX-XX-XXXX).";
+          } else {
+            errorMsg.textContent = "Please enter a valid format";
+          }
+        }
+        errorMsg.style.display = "block";
+        input.setAttribute("aria-invalid", "true");
+      }
+    },
+    true
+  );
+
+  // Clear error messages on valid input
+  document.addEventListener("input", function (e) {
+    const input = e.target;
+    if (input.parentElement.closest(".owner-block")) {
+      const errorMsg = input.parentElement.querySelector(".error-message");
+      if (errorMsg) {
+        if (input.validity.valid) {
+          errorMsg.style.display = "none";
+          input.removeAttribute("aria-invalid");
+        }
+      }
+    }
+  });
 }
 
 // Form submission handling
@@ -534,7 +623,7 @@ function setupFormSubmission() {
   const form = document.getElementById("preapprovalForm");
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  form.addEventListener("submit", async function (e) {
+  form.addEventListener("submit", function (e) {
     e.preventDefault();
 
     // Validate percentages before submission
@@ -543,32 +632,150 @@ function setupFormSubmission() {
       return;
     }
 
-    // Show loading state
-    submitBtn.classList.add("loading");
-    submitBtn.disabled = true;
+    // Create FormData object and convert to a regular object
+    const formData = new FormData(form);
+    const formObject = {};
 
-    try {
-      const formData = new FormData(form);
-
-      const response = await fetch("/api/preapproval", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        showSuccessMessage(result.applicationId);
+    // Process form data into a structured object
+    formData.forEach((value, key) => {
+      // Handle array notation in names (e.g., owners[0][firstName])
+      if (key.includes("[") && key.includes("]")) {
+        const matches = key.match(/([^\[]+)\[([^\]]+)\](?:\[([^\]]+)\])?/);
+        if (matches) {
+          const [_, mainKey, index, subKey] = matches;
+          if (subKey) {
+            // Handle nested arrays (e.g., owners[0][firstName])
+            formObject[mainKey] = formObject[mainKey] || [];
+            formObject[mainKey][index] = formObject[mainKey][index] || {};
+            formObject[mainKey][index][subKey] = value;
+          } else {
+            // Handle simple arrays
+            formObject[mainKey] = formObject[mainKey] || [];
+            formObject[mainKey][index] = value;
+          }
+        }
+      } else if (key.endsWith("[]")) {
+        // Handle multiple checkboxes
+        const mainKey = key.slice(0, -2);
+        formObject[mainKey] = formObject[mainKey] || [];
+        formObject[mainKey].push(value);
       } else {
-        throw new Error(result.message || "Submission failed");
+        // Handle regular fields
+        formObject[key] = value;
       }
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("There was an error submitting your application. Please try again.");
-    } finally {
-      submitBtn.classList.remove("loading");
-      submitBtn.disabled = false;
-    }
+    });
+
+    // Add submission metadata
+    formObject.submissionDate = new Date().toISOString();
+    formObject.formVersion = "1.0";
+
+    // Create a formatted JSON string
+    const jsonString = JSON.stringify(formObject, null, 2);
+
+    // Create the display container
+    const displayContainer = document.createElement("div");
+    displayContainer.className = "json-display-container";
+    displayContainer.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      overflow-y: auto;
+    `;
+
+    // Add a header
+    const header = document.createElement("div");
+    header.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    `;
+
+    const title = document.createElement("h3");
+    title.textContent = "Form Submission Data";
+
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "×";
+    closeButton.style.cssText = `
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0 8px;
+    `;
+    closeButton.onclick = () => displayContainer.remove();
+
+    header.appendChild(title);
+    header.appendChild(closeButton);
+
+    // Add the JSON content
+    const pre = document.createElement("pre");
+    pre.style.cssText = `
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    `;
+    pre.textContent = jsonString;
+
+    // Add copy button
+    const copyButton = document.createElement("button");
+    copyButton.textContent = "Copy to Clipboard";
+    copyButton.style.cssText = `
+      margin-top: 15px;
+      padding: 8px 16px;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    `;
+    copyButton.onclick = () => {
+      navigator.clipboard.writeText(jsonString);
+      copyButton.textContent = "Copied!";
+      setTimeout(() => {
+        copyButton.textContent = "Copy to Clipboard";
+      }, 2000);
+    };
+
+    // Add overlay
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+    `;
+    overlay.onclick = () => {
+      overlay.remove();
+      displayContainer.remove();
+    };
+
+    // Assemble the display
+    displayContainer.appendChild(header);
+    displayContainer.appendChild(pre);
+    displayContainer.appendChild(copyButton);
+
+    // Add to document
+    document.body.appendChild(overlay);
+    document.body.appendChild(displayContainer);
+
+    // Log to console as well
+    console.log("Form submission data:", formObject);
   });
 }
 

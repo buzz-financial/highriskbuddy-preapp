@@ -32,7 +32,7 @@ header {
 }
 
 header img {
-  max-width: 150px;
+  max-width: 200px;
   margin-bottom: 15px;
 }
 
@@ -426,22 +426,34 @@ select:hover {
 }
 
 /* Form Validation States */
-.form-group.error input,
-.form-group.error select {
+/* Only show validation styles when field has error-state class */
+input.error-state,
+select.error-state {
   border-color: #e53e3e;
-  background-color: #fed7d7;
+  background-color: #fff5f5;
 }
 
-.form-group.success input,
-.form-group.success select {
-  border-color: #38a169;
-  background-color: #f0fff4;
+input.error-state:focus,
+select.error-state:focus {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+/* Special styling for routing number */
+#routingNumber:invalid:not(:placeholder-shown) {
+  border-width: 2px;
+}
+
+#routingNumber:invalid:not(:placeholder-shown) ~ .error-message {
+  display: block;
 }
 
 .error-message {
+  display: none;
   color: #e53e3e;
   font-size: 0.875rem;
   margin-top: 5px;
+  animation: fadeIn 0.2s ease-in;
 }
 
 /* Loading States */

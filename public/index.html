@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>High Risk Buddy - Merchant Preapproval</title>
+    <link rel="icon" type="image/x-icon" href="./src/High-Risk-Buddy-Logo.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -23,21 +24,19 @@
             <label for="productService">What is your product or service? *</label>
             <select id="productService" name="productService" required>
               <option value="">Select your business type</option>
-              <option value="adult-entertainment">Adult Entertainment</option>
-              <option value="cbd-hemp">CBD/Hemp Products</option>
-              <option value="cryptocurrency">Cryptocurrency</option>
-              <option value="dating-services">Dating Services</option>
-              <option value="e-cigarettes">E-cigarettes/Vaping</option>
-              <option value="firearms">Firearms</option>
-              <option value="gambling">Gambling/Gaming</option>
-              <option value="nutraceuticals">Nutraceuticals</option>
-              <option value="online-pharmacy">Online Pharmacy</option>
-              <option value="travel">Travel Services</option>
-              <option value="tech-support">Tech Support</option>
-              <option value="debt-collection">Debt Collection</option>
-              <option value="forex-trading">Forex Trading</option>
-              <option value="telemarketing">Telemarketing</option>
-              <option value="credit-repair">Credit Repair</option>
+              <option value="retail">Retail</option>
+              <option value="retail-with-tip">Retail with Tip</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="qsr">QSR</option>
+              <option value="fast-food">Fast Food</option>
+              <option value="mail-phone-order">Mail/Phone Order</option>
+              <option value="internet">Internet</option>
+              <option value="lodging">Lodging</option>
+              <option value="service">Service</option>
+              <option value="petroleum">Petroleum</option>
+              <option value="utility">Utility</option>
+              <option value="health-care">Health Care</option>
+              <option value="public-sector">Public Sector</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -527,8 +526,11 @@
               id="routingNumber"
               name="routingNumber"
               pattern="[0-9]{9}"
+              placeholder="Enter 9 digits"
               required
+              aria-describedby="routingNumberHelp"
             />
+            <div id="routingNumberHelp" class="error-message" style="display: none"></div>
           </div>
         </section>
 
