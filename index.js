@@ -11,6 +11,154 @@ const PORT = process.env.PORT || 8080;
 // Initialize database client
 const database = new DatabaseClient();
 
+// Webhook URLs
+const WEBHOOKS = {
+  leadIn: process.env.LEADIN,
+  formCompletion: process.env.FORMCOMPLETION,
+};
+
+// Security configuration
+const WEBHOOK_MODE = process.env.WEBHOOK_MODE || "production";
+
+async function sendWebhook(webhookUrl, data) {
+  // TEST MODE - Just log the payload without sending
+  if (process.env.WEBHOOK_TEST_MODE === "true") {
+    console.log("\n🧪 WEBHOOK TEST MODE - Payload Preview:");
+    console.log("=====================================");
+    console.log("Webhook URL:", webhookUrl);
+    console.log("Payload Size:", JSON.stringify(data).length, "bytes");
+    console.log("\nFull Payload:");
+    console.log(JSON.stringify(data, null, 2));
+    console.log("=====================================\n");
+
+    // Simulate successful response
+    return true;
+  }
+
+  // Normal webhook sending code
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "HighRiskBuddy-Webhook/1.0",
+        },
+        body: JSON.stringify({
+          ...data,
+          webhookVersion: "1.0",
+          source: "high-risk-buddy-preapproval",
+        }),
+        timeout: 10000,
+      });
+
+      if (response.ok) {
+        console.log(`✅ Webhook sent successfully to ${webhookUrl}:`, response.status);
+        return true;
+      } else {
+        console.warn(
+          `⚠️ Webhook attempt ${attempt + 1} failed:`,
+          response.status,
+          response.statusText
+        );
+      }
+    } catch (error) {
+      console.error(`❌ Webhook attempt ${attempt + 1} error for ${webhookUrl}:`, error.message);
+    }
+
+    attempt++;
+    if (attempt < maxRetries) {
+      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+
+  console.error(`❌ Failed to send webhook after ${maxRetries} attempts`);
+  return false;
+}
+
+// Test endpoint to preview webhook payload structure
+app.get("/test/webhook-payload", (req, res) => {
+  // Sample form data for testing - using correct field names
+  const sampleFormData = {
+    businessEmail: "business@example.com",
+    contactFirstName: "Jane", // New dedicated contact first name field
+    contactLastName: "Smith", // New dedicated contact last name field
+    contactPhone: "(555) 123-4567", // Contact phone field
+    customerSupportPhone: "(555) 999-8888", // Business phone number (separate)
+    "owners[0][firstName]": "John", // Owner's first name
+    "owners[0][lastName]": "Doe", // Owner's last name
+  };
+
+  // Generate test application ID
+  const testApplicationId = `APP-${Date.now()}-TEST123`;
+
+  // MINIMAL webhook payload - ONLY contact info
+  const webhookPayload = {
+    applicationId: testApplicationId,
+    timestamp: new Date().toISOString(),
+    contact: {
+      firstName: sampleFormData.contactFirstName, // Using contact first name
+      lastName: sampleFormData.contactLastName, // Using contact last name
+      phone: sampleFormData.contactPhone, // Using contact phone
+      email: sampleFormData.businessEmail,
+    },
+    metadata: {
+      source: "high-risk-buddy-preapproval",
+      submissionMethod: "web_form",
+      formVersion: "1.0",
+    },
+  };
+
+  // Return formatted response
+  res.json({
+    testMode: true,
+    webhookUrls: {
+      leadIn: WEBHOOKS.leadIn,
+      formCompletion: WEBHOOKS.formCompletion,
+    },
+    payloadSize: JSON.stringify(webhookPayload).length + " bytes",
+    samplePayload: webhookPayload,
+    fieldMapping: {
+      "First Name": "contactFirstName -> Dedicated contact first name field",
+      "Last Name": "contactLastName -> Dedicated contact last name field",
+      Phone: "contactPhone -> Dedicated contact phone number",
+      Email: "businessEmail -> Business email address",
+    },
+    formFields: {
+      "Contact First Name": "contactFirstName (new field)",
+      "Contact Last Name": "contactLastName (new field)",
+      "Contact Phone": "contactPhone (new field)",
+      "Business Phone": "customerSupportPhone (separate from contact phone)",
+      Email: "businessEmail",
+    },
+    securityNote:
+      "Minimal payload - ONLY contact information (contact first name, contact last name, contact phone, email)",
+  });
+});
+
+// Lead-in payload test endpoint
+app.get("/test/lead-payload", (req, res) => {
+  const leadPayload = {
+    timestamp: new Date().toISOString(),
+    action: "form_engagement_started",
+    source: "high-risk-buddy",
+    leadSource: "preapproval_form",
+  };
+
+  res.json({
+    testMode: true,
+    webhookUrl: WEBHOOKS.leadIn,
+    payloadSize: JSON.stringify(leadPayload).length + " bytes",
+    samplePayload: leadPayload,
+  });
+});
+
+// Rate limiting for lead-in tracking
+const leadTrackingCache = new Map();
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -56,13 +204,51 @@ app.get("/api/health", (req, res) => {
     status: "Server is running",
     timestamp: new Date().toISOString(),
     database: "SQLite connected",
+    webhooksEnabled: true,
+    webhookMode: WEBHOOK_MODE,
+    webhookPayload: "minimal (contact info only)",
   });
 });
 
-// Main form submission endpoint
+// Lead-in tracking endpoint with rate limiting
+app.post("/api/lead-in", async (req, res) => {
+  try {
+    const clientIP = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+
+    // Rate limiting: only allow one lead-in per IP per 10 minutes
+    if (leadTrackingCache.has(clientIP)) {
+      const lastTracking = leadTrackingCache.get(clientIP);
+      if (now - lastTracking < 10 * 60 * 1000) {
+        return res.json({ success: true, message: "Already tracked" });
+      }
+    }
+
+    leadTrackingCache.set(clientIP, now);
+
+    const leadData = {
+      timestamp: new Date().toISOString(),
+      action: "form_engagement_started",
+      source: "high-risk-buddy",
+      leadSource: "preapproval_form",
+    };
+
+    console.log("📊 Lead-in tracking:", leadData);
+
+    // Send to lead-in webhook
+    await sendWebhook(WEBHOOKS.leadIn, leadData);
+
+    res.json({ success: true, message: "Lead tracking recorded securely" });
+  } catch (error) {
+    console.error("Lead-in tracking error:", error);
+    res.status(500).json({ success: false, message: "Tracking error" });
+  }
+});
+
+// Main form submission endpoint with MINIMAL webhook payload
 app.post("/api/preapproval", upload.array("documents"), async (req, res) => {
   try {
-    console.log("Received preapproval application");
+    console.log("📝 Received preapproval application");
     console.log("Form data keys:", Object.keys(req.body));
     console.log("Files uploaded:", req.files?.length || 0);
 
@@ -74,15 +260,39 @@ app.post("/api/preapproval", upload.array("documents"), async (req, res) => {
       submissionMethod: "web_form",
     };
 
-    // Save to database
+    // Save to database (all data saved locally)
     const result = await database.saveApplication(applicationData, req.files || []);
 
     if (result.success) {
+      // MINIMAL webhook payload - ONLY contact information as requested
+      const webhookData = {
+        applicationId: result.applicationId,
+        timestamp: new Date().toISOString(),
+        contact: {
+          firstName: req.body.contactFirstName, // Using dedicated contact first name field
+          lastName: req.body.contactLastName, // Using dedicated contact last name field
+          phone: req.body.contactPhone, // Using contact phone field
+          email: req.body.businessEmail,
+        },
+        metadata: {
+          source: "high-risk-buddy-preapproval",
+          submissionMethod: "web_form",
+          formVersion: "1.0",
+        },
+      };
+
+      console.log(`🚀 Sending minimal webhook payload`);
+      console.log("📦 Full webhookData:", webhookData);
+
+      // Send to form completion webhook
+      const webhookSent = await sendWebhook(WEBHOOKS.formCompletion, webhookData);
+
       res.json({
         success: true,
         applicationId: result.applicationId,
         message: "Application submitted successfully",
         filesUploaded: req.files?.length || 0,
+        webhookSent: webhookSent,
       });
     } else {
       throw new Error("Failed to save application");
@@ -223,10 +433,15 @@ app.get("/admin", (req, res) => {
         .status.approved { background: #e8f5e8; color: #2e7d32; }
         .status.rejected { background: #ffebee; color: #c62828; }
         button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .webhook-info { background: #d1ecf1; border: 1px solid #bee5eb; padding: 10px; margin: 10px 0; border-radius: 4px; }
     </style>
 </head>
 <body>
     <h1>High Risk Buddy - Admin Dashboard</h1>
+    
+    <div class="webhook-info">
+        <strong>Webhook Status:</strong> Active | Mode: ${WEBHOOK_MODE} | Payload: Contact Info Only (First Name, Last Name, Phone, Email)
+    </div>
     
     <div id="stats" class="stats">
         <div class="stat-card">
@@ -379,7 +594,9 @@ process.on("SIGTERM", async () => {
 });
 
 app.listen(PORT, function () {
-  console.log(`Server ready. Listening on port ${PORT}`);
-  console.log(`Form available at: http://localhost:${PORT}`);
-  console.log(`Admin dashboard at: http://localhost:${PORT}/admin`);
+  console.log(`🚀 Server ready. Listening on port ${PORT}`);
+  console.log(`📋 Form available at: http://localhost:${PORT}`);
+  console.log(`📊 Admin dashboard at: http://localhost:${PORT}/admin`);
+  console.log(`🔗 Webhook integration enabled (${WEBHOOK_MODE} mode)`);
+  console.log(`📱 Webhook payload: Contact info only (first name, last name, phone, email)`);
 });

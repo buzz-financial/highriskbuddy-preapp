@@ -1,6 +1,5 @@
-// Complete Merchant Preapproval Form JavaScript
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("Form JavaScript loaded");
+  console.log("Form JavaScript loaded with webhook integration");
   initializeForm();
 });
 
@@ -15,6 +14,94 @@ function initializeForm() {
   setupOwnerManagement();
   setupFormSubmission();
   setupInputMasking();
+  setupLeadTracking();
+}
+
+// Lead tracking functionality
+function setupLeadTracking() {
+  let leadTracked = false;
+
+  // Track when user starts filling out the form (first meaningful interaction)
+  const trackableFields = [
+    "productService",
+    "dbaName",
+    "businessEmail",
+    "contactFirstName", // Updated field name
+    "contactLastName", // Updated field name
+    "contactPhone",
+    "customerSupportPhone",
+    "physicalAddress",
+    "legalName",
+    "monthlyVolume",
+    "businessWebsite",
+  ];
+
+  trackableFields.forEach((fieldId) => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      // Track on focus (when they click into a field)
+      field.addEventListener("focus", function () {
+        if (!leadTracked) {
+          sendLeadInTracking();
+          leadTracked = true;
+        }
+      });
+
+      // Also track on first input for text fields
+      if (
+        field.type === "text" ||
+        field.type === "email" ||
+        field.type === "tel" ||
+        field.tagName === "SELECT"
+      ) {
+        field.addEventListener("input", function () {
+          if (!leadTracked && this.value.length > 0) {
+            sendLeadInTracking();
+            leadTracked = true;
+          }
+        });
+
+        field.addEventListener("change", function () {
+          if (!leadTracked && this.value.length > 0) {
+            sendLeadInTracking();
+            leadTracked = true;
+          }
+        });
+      }
+    }
+  });
+}
+
+// Function to send lead-in tracking
+async function sendLeadInTracking() {
+  try {
+    const leadData = {
+      timestamp: new Date().toISOString(),
+      page: window.location.href,
+      userAgent: navigator.userAgent,
+      referrer: document.referrer,
+      action: "form_engagement_started",
+      source: "merchant_preapproval_form",
+    };
+
+    console.log("Sending lead-in tracking...", leadData);
+
+    const response = await fetch("/api/lead-in", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(leadData),
+    });
+
+    if (response.ok) {
+      console.log("Lead-in tracking sent successfully");
+    } else {
+      console.warn("Lead-in tracking failed:", response.status);
+    }
+  } catch (error) {
+    console.error("Error sending lead-in tracking:", error);
+  }
 }
 
 // Product service conditional logic
@@ -545,7 +632,9 @@ function setupInputMasking() {
           input.removeAttribute("aria-invalid");
         }
       }
-    } // Routing number validation and formatting
+    }
+
+    // Routing number validation and formatting
     if (input.id === "routingNumber") {
       let value = input.value.replace(/\D/g, "").slice(0, 9);
       input.value = value;
@@ -618,7 +707,7 @@ function setupInputMasking() {
   });
 }
 
-// Replace the entire setupFormSubmission function with this:
+// Form submission with webhook integration
 function setupFormSubmission() {
   const form = document.getElementById("preapprovalForm");
   const submitBtn = form.querySelector('button[type="submit"]');
@@ -639,7 +728,7 @@ function setupFormSubmission() {
     try {
       const formData = new FormData(form);
 
-      console.log("Submitting to server...");
+      console.log("Submitting to server with webhook integration...");
 
       const response = await fetch("/api/preapproval", {
         method: "POST",
@@ -651,6 +740,7 @@ function setupFormSubmission() {
       if (result.success) {
         showSuccessMessage(result.applicationId);
         console.log("Application submitted successfully:", result.applicationId);
+        console.log("Webhook sent:", result.webhookSent ? "Yes" : "Failed");
       } else {
         throw new Error(result.message || "Submission failed");
       }
@@ -701,4 +791,6 @@ function testFormFunctionality() {
   console.log("Product select:", document.getElementById("productService"));
   console.log("Owner counter:", ownerCounter);
   console.log("Sales total element:", document.getElementById("salesTotal"));
+  console.log("Lead tracking enabled:", typeof sendLeadInTracking === "function");
+  console.log("Webhook integration active");
 }
