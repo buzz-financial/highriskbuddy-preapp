@@ -1,0 +1,82 @@
+{
+  "exportedAt": "2025-09-11T15:57:47.297Z",
+  "totalApplications": 1,
+  "applications": [
+    {
+      "id": 1,
+      "applicationId": "APP-1757606246850-06ypdy32d",
+      "data": {
+        "productService": "restaurant",
+        "otherProduct": "",
+        "fulfillmentCenter": "no",
+        "fulfillmentName": "",
+        "fulfillmentPhone": "",
+        "dbaName": "test",
+        "businessWebsite": "https://test.com",
+        "physicalAddress": "test",
+        "city": "test",
+        "state": "AK",
+        "zipCode": "4213",
+        "customerSupportPhone": "(123) 456-7890",
+        "businessEmail": "test@gmail.com",
+        "swipedPercent": "0100",
+        "keyedPercent": "0",
+        "motoPercent": "0",
+        "ecommPercent": "0",
+        "yearsInBusiness": "5-10",
+        "legalName": "test",
+        "entityType": "corporation",
+        "yearsOwned": "4",
+        "owners": [
+          {
+            "firstName": "test",
+            "lastName": "test",
+            "ownershipPercent": "43",
+            "title": "president",
+            "ssn": "123-45-4321",
+            "driversLicense": "43234",
+            "licenseState": "AZ",
+            "homeAddress": "345432",
+            "homeCity": "345432",
+            "homeState": "MT",
+            "homeZip": "345432",
+            "homePhone": "(234) 566-5432",
+            "rentOwn": "own",
+            "timeAtAddress": "3"
+          }
+        ],
+        "bankName": "etst",
+        "accountNumber": "test",
+        "routingNumber": "432345231",
+        "monthlyVolume": "41",
+        "highTicket": "41",
+        "avgTicket": "41",
+        "expectedAmex": "41",
+        "gateway": "authorize-net",
+        "otherGateway": "",
+        "businessPercent": "50",
+        "consumerPercent": "050",
+        "marketing": [
+          "direct-mail"
+        ],
+        "marketingOther": "",
+        "orderProcessor": "fulfillment",
+        "orderProcessorOther": "",
+        "ownInventory": "no",
+        "storedAtBusiness": "no",
+        "storageLocation": "test",
+        "shipmentDays": "2",
+        "agreement": "on",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+        "ipAddress": "::1",
+        "submissionMethod": "web_form",
+        "applicationId": "APP-1757606246850-06ypdy32d",
+        "submittedAt": "2025-09-11T15:57:26.850Z",
+        "formVersion": "1.0"
+      },
+      "files": [],
+      "submittedAt": "2025-09-11 15:57:26",
+      "status": "submitted"
+    }
+  ]
+}

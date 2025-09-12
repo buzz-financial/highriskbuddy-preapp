@@ -618,12 +618,12 @@ function setupInputMasking() {
   });
 }
 
-// Form submission handling
+// Replace the entire setupFormSubmission function with this:
 function setupFormSubmission() {
   const form = document.getElementById("preapprovalForm");
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  form.addEventListener("submit", function (e) {
+  form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     // Validate percentages before submission
@@ -632,150 +632,35 @@ function setupFormSubmission() {
       return;
     }
 
-    // Create FormData object and convert to a regular object
-    const formData = new FormData(form);
-    const formObject = {};
+    // Show loading state
+    submitBtn.classList.add("loading");
+    submitBtn.disabled = true;
 
-    // Process form data into a structured object
-    formData.forEach((value, key) => {
-      // Handle array notation in names (e.g., owners[0][firstName])
-      if (key.includes("[") && key.includes("]")) {
-        const matches = key.match(/([^\[]+)\[([^\]]+)\](?:\[([^\]]+)\])?/);
-        if (matches) {
-          const [_, mainKey, index, subKey] = matches;
-          if (subKey) {
-            // Handle nested arrays (e.g., owners[0][firstName])
-            formObject[mainKey] = formObject[mainKey] || [];
-            formObject[mainKey][index] = formObject[mainKey][index] || {};
-            formObject[mainKey][index][subKey] = value;
-          } else {
-            // Handle simple arrays
-            formObject[mainKey] = formObject[mainKey] || [];
-            formObject[mainKey][index] = value;
-          }
-        }
-      } else if (key.endsWith("[]")) {
-        // Handle multiple checkboxes
-        const mainKey = key.slice(0, -2);
-        formObject[mainKey] = formObject[mainKey] || [];
-        formObject[mainKey].push(value);
+    try {
+      const formData = new FormData(form);
+
+      console.log("Submitting to server...");
+
+      const response = await fetch("/api/preapproval", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showSuccessMessage(result.applicationId);
+        console.log("Application submitted successfully:", result.applicationId);
       } else {
-        // Handle regular fields
-        formObject[key] = value;
+        throw new Error(result.message || "Submission failed");
       }
-    });
-
-    // Add submission metadata
-    formObject.submissionDate = new Date().toISOString();
-    formObject.formVersion = "1.0";
-
-    // Create a formatted JSON string
-    const jsonString = JSON.stringify(formObject, null, 2);
-
-    // Create the display container
-    const displayContainer = document.createElement("div");
-    displayContainer.className = "json-display-container";
-    displayContainer.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90%;
-      max-width: 800px;
-      max-height: 90vh;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
-      overflow-y: auto;
-    `;
-
-    // Add a header
-    const header = document.createElement("div");
-    header.style.cssText = `
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    `;
-
-    const title = document.createElement("h3");
-    title.textContent = "Form Submission Data";
-
-    const closeButton = document.createElement("button");
-    closeButton.textContent = "×";
-    closeButton.style.cssText = `
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      padding: 0 8px;
-    `;
-    closeButton.onclick = () => displayContainer.remove();
-
-    header.appendChild(title);
-    header.appendChild(closeButton);
-
-    // Add the JSON content
-    const pre = document.createElement("pre");
-    pre.style.cssText = `
-      background-color: #f5f5f5;
-      padding: 15px;
-      border-radius: 4px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    `;
-    pre.textContent = jsonString;
-
-    // Add copy button
-    const copyButton = document.createElement("button");
-    copyButton.textContent = "Copy to Clipboard";
-    copyButton.style.cssText = `
-      margin-top: 15px;
-      padding: 8px 16px;
-      background-color: #0066cc;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    `;
-    copyButton.onclick = () => {
-      navigator.clipboard.writeText(jsonString);
-      copyButton.textContent = "Copied!";
-      setTimeout(() => {
-        copyButton.textContent = "Copy to Clipboard";
-      }, 2000);
-    };
-
-    // Add overlay
-    const overlay = document.createElement("div");
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 999;
-    `;
-    overlay.onclick = () => {
-      overlay.remove();
-      displayContainer.remove();
-    };
-
-    // Assemble the display
-    displayContainer.appendChild(header);
-    displayContainer.appendChild(pre);
-    displayContainer.appendChild(copyButton);
-
-    // Add to document
-    document.body.appendChild(overlay);
-    document.body.appendChild(displayContainer);
-
-    // Log to console as well
-    console.log("Form submission data:", formObject);
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("There was an error submitting your application. Please try again.");
+    } finally {
+      submitBtn.classList.remove("loading");
+      submitBtn.disabled = false;
+    }
   });
 }
 
