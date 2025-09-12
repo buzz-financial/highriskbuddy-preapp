@@ -20,6 +20,7 @@ const WEBHOOKS = {
 // Security configuration
 const WEBHOOK_MODE = process.env.WEBHOOK_MODE || "production";
 
+/// FUNCTION TO SEND WEBHOOK (DO NOT CHANGE) ///
 async function sendWebhook(webhookUrl, data) {
   // TEST MODE - Just log the payload without sending
   if (process.env.WEBHOOK_TEST_MODE === "true") {
@@ -95,14 +96,14 @@ app.get("/test/webhook-payload", (req, res) => {
   // Generate test application ID
   const testApplicationId = `APP-${Date.now()}-TEST123`;
 
-  // MINIMAL webhook payload - ONLY contact info
+  // Webhook Payload of Contact Info Only
   const webhookPayload = {
     applicationId: testApplicationId,
     timestamp: new Date().toISOString(),
     contact: {
-      firstName: sampleFormData.contactFirstName, // Using contact first name
-      lastName: sampleFormData.contactLastName, // Using contact last name
-      phone: sampleFormData.contactPhone, // Using contact phone
+      firstName: sampleFormData.contactFirstName,
+      lastName: sampleFormData.contactLastName,
+      phone: sampleFormData.contactPhone,
       email: sampleFormData.businessEmail,
     },
     metadata: {
@@ -264,14 +265,14 @@ app.post("/api/preapproval", upload.array("documents"), async (req, res) => {
     const result = await database.saveApplication(applicationData, req.files || []);
 
     if (result.success) {
-      // MINIMAL webhook payload - ONLY contact information as requested
+      // Webhook Payload of Contact Info Only
       const webhookData = {
         applicationId: result.applicationId,
         timestamp: new Date().toISOString(),
         contact: {
-          firstName: req.body.contactFirstName, // Using dedicated contact first name field
-          lastName: req.body.contactLastName, // Using dedicated contact last name field
-          phone: req.body.contactPhone, // Using contact phone field
+          firstName: req.body.contactFirstName,
+          lastName: req.body.contactLastName,
+          phone: req.body.contactPhone,
           email: req.body.businessEmail,
         },
         metadata: {

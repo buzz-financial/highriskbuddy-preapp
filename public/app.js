@@ -17,17 +17,16 @@ function initializeForm() {
   setupLeadTracking();
 }
 
-// Lead tracking functionality
+/// LEAD TRACKING (DO NOT CHANGE) ///
 function setupLeadTracking() {
   let leadTracked = false;
 
-  // Track when user starts filling out the form (first meaningful interaction)
   const trackableFields = [
     "productService",
     "dbaName",
     "businessEmail",
-    "contactFirstName", // Updated field name
-    "contactLastName", // Updated field name
+    "contactFirstName",
+    "contactLastName",
     "contactPhone",
     "customerSupportPhone",
     "physicalAddress",
@@ -72,7 +71,7 @@ function setupLeadTracking() {
   });
 }
 
-// Function to send lead-in tracking
+/// Function to send lead-in tracking (DO NOT CHANGE) ///
 async function sendLeadInTracking() {
   try {
     const leadData = {
